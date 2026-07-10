@@ -11,6 +11,7 @@ import (
 var syntaxError error = errors.New("\033[0;31m[ERROR]\033[0;37m goenv: incorrect syntax: ")
 
 func FetchString(file *os.File) {
+	keymap := make(map[string]string)
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		if err := scanner.Err(); err != nil {
@@ -18,10 +19,10 @@ func FetchString(file *os.File) {
 		}
 		str := scanner.Text()
 		str = strings.TrimSpace(str)
-		if !strings.Contains(str, "=") {
+		runes := []rune(str)
+		if !strings.Contains(str, "=") && runes[0] != '#' {
 			log.Fatal(syntaxError, str, "\n")
 		}
-		runes := []rune(str)
 		if runes[0] == '=' {
 			log.Fatal(syntaxError, string(runes), "\n")
 		}
@@ -29,7 +30,9 @@ func FetchString(file *os.File) {
 			key, val := tokenize(runes)
 			keymap[key] = val
 		}
+
 	}
+	fillEnv(keymap)
 }
 
 func tokenize(runes []rune) (keyToken string, valToken string) {
@@ -43,6 +46,7 @@ func tokenize(runes []rune) (keyToken string, valToken string) {
 			key = strings.TrimSpace(key)
 			valueStart := idx + 1
 			valueUnstripped = string(runes[valueStart:])
+			//fmt.Println(valueUnstripped)
 			break
 		}
 	}
@@ -53,13 +57,13 @@ func tokenize(runes []rune) (keyToken string, valToken string) {
 			value = string(runeValue[:index])
 		}
 		// we dont have quotes
-	} else if strings.ContainsAny(valueUnstripped, "#\n ") {
+	} else {
 		runeValue := []rune(valueUnstripped)
 		if index, isFound := searchVal(runeValue, "#\n "); isFound {
 			value = string(runeValue[:index])
+		} else {
+			value = string(runeValue)
 		}
-	} else {
-		log.Panicln("\033[0;31m[ERROR]\033[0;37m goenv: unknown parsing error, panicing")
 	}
 	return key, value
 }
@@ -74,8 +78,8 @@ func searchVal(source []rune, sample string) (int, bool) {
 	return 0, false
 }
 
-func fillEnv(keymap map[string]string) {
-	for key, val := range keymap {
+func fillEnv(envList map[string]string) {
+	for key, val := range envList {
 		if err := os.Setenv(key, val); err != nil {
 			log.Panic("\033[0;31m[ERROR]\033[0;37m goenv: failed to load variable to environment\n")
 		}
