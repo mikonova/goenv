@@ -10,7 +10,7 @@ import (
 
 var syntaxError error = errors.New("\033[0;31m[ERROR]\033[0;37m goenv: incorrect syntax: ")
 
-func FetchString(file *os.File) {
+func FetchStrings(file *os.File) {
 	keymap := make(map[string]string)
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {

@@ -1,3 +1,4 @@
+//module to help you load environment variables from .env files
 module github.com/mikonova/goenv
 
 // broken version

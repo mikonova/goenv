@@ -10,6 +10,7 @@ import (
 // Contains all file handles collected before ParseFiles () is called
 var FileHandles []*os.File
 
+// Collects all file relative paths into slice of handles, ready to work. Can be called multiple times
 func FetchFiles(path ...string) {
 	for index := range path {
 		file, err := os.OpenFile(path[index], os.O_RDONLY, 0640)
