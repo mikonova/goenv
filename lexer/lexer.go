@@ -19,6 +19,7 @@ func FetchStrings(file *os.File) {
 		}
 		str := scanner.Text()
 		str = strings.TrimSpace(str)
+		str += "\n"
 		runes := []rune(str)
 		if !strings.Contains(str, "=") && runes[0] != '#' {
 			log.Fatal(syntaxError, str, "\n")
@@ -27,7 +28,10 @@ func FetchStrings(file *os.File) {
 			log.Fatal(syntaxError, string(runes), "\n")
 		}
 		if runes[0] != '#' {
-			key, val := tokenize(runes)
+			key, val, err := tokenize(runes)
+			if err != nil {
+				log.Fatalln(err)
+			}
 			keymap[key] = val
 		}
 
@@ -35,37 +39,48 @@ func FetchStrings(file *os.File) {
 	fillEnv(keymap)
 }
 
-func tokenize(runes []rune) (keyToken string, valToken string) {
+func tokenize(runes []rune) (string, string, error) {
 	var (
-		key, value, valueUnstripped string
+		key, value      string
+		valueUnstripped []rune
 	)
-	for idx := range runes {
+	if index, isValid := searchVal(runes, "="); isValid {
+		key = string(runes[:index])
+		valueUnstripped = runes[index+1:]
 
-		if runes[idx] == '=' {
-			key = string(runes[0:idx])
-			key = strings.TrimSpace(key)
-			valueStart := idx + 1
-			valueUnstripped = string(runes[valueStart:])
-			//fmt.Println(valueUnstripped)
-			break
-		}
-	}
-	// we have quotes
-	if strings.ContainsAny(valueUnstripped, "\"'") {
-		runeValue := []rune(valueUnstripped)[1:]
-		if index, isFound := searchVal(runeValue, "\"'"); isFound {
-			value = string(runeValue[:index])
-		}
-		// we dont have quotes
-	} else {
-		runeValue := []rune(valueUnstripped)
-		if index, isFound := searchVal(runeValue, "#\n "); isFound {
-			value = string(runeValue[:index])
+		if matchSlice, matches := findAll(valueUnstripped, "\"'"); matches == 2 {
+			value = string(valueUnstripped[matchSlice[0]+1 : matchSlice[1]])
+		} else if _, matches := findAll(valueUnstripped, "\"'"); matches == 1 {
+			return "", "", errors.New(syntaxError.Error() + "cannot find closing quote in " + string(runes) + "\n")
+		} else if idx, isEndl := searchVal(valueUnstripped, "#\n "); isEndl {
+			value = string(valueUnstripped[:idx])
 		} else {
-			value = string(runeValue)
+			return "", "", errors.New(syntaxError.Error() + string(runes) + "\n")
 		}
 	}
-	return key, value
+	return key, value, nil
+}
+
+// searches for all inclusions of a rune in a slice of runes, returns list of indexes and number of iclusions
+func findAll(source []rune, sample string) (matchIndexes []int, inclusions int) {
+	sampleRuneSlice := []rune(sample)
+	for k, v := range source {
+		if findAllSearch(v, sampleRuneSlice) {
+			inclusions++
+			matchIndexes = append(matchIndexes, k)
+		}
+	}
+	return matchIndexes, inclusions
+}
+
+// search function for findAll
+func findAllSearch(char rune, compare []rune) bool {
+	for _, val := range compare {
+		if char == val {
+			return true
+		}
+	}
+	return false
 }
 
 // searches for the first occurrence of any char of sample in a slice of runes

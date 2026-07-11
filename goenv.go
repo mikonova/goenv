@@ -25,6 +25,6 @@ func FetchFiles(path ...string) {
 // parses all variables from .env to the go environment variables
 func ParseFiles() {
 	for index := range FileHandles {
-		lexer.FetchString(FileHandles[index])
+		lexer.FetchStrings(FileHandles[index])
 	}
 }
