@@ -93,6 +93,7 @@ func searchVal(source []rune, sample string) (int, bool) {
 	return 0, false
 }
 
+// fills environment with variables
 func fillEnv(envList map[string]string) {
 	for key, val := range envList {
 		if err := os.Setenv(key, val); err != nil {
